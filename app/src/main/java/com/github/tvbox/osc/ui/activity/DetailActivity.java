@@ -73,6 +73,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -207,6 +208,8 @@ public class DetailActivity extends BaseActivity {
 
         //禁用播放地址焦点
         tvPlayUrl.setFocusable(false);
+
+        llPlayerFragmentContainerBlock.setOnClickListener((view -> toggleFullPreview()));
 
         tvSort.setOnClickListener(new View.OnClickListener() {
             @SuppressLint("NotifyDataSetChanged")
@@ -648,6 +651,7 @@ public class DetailActivity extends BaseActivity {
                             jumpToPlay();
                             llPlayerFragmentContainer.setVisibility(View.VISIBLE);
                             llPlayerFragmentContainerBlock.setVisibility(View.VISIBLE);
+                            llPlayerFragmentContainerBlock.requestFocus();
                         }
                         // startQuickSearch();
                     } else {
@@ -760,7 +764,7 @@ public class DetailActivity extends BaseActivity {
         quickSearchWord.clear();
         searchTitle = mVideo.name;
         quickSearchData.clear();
-        quickSearchWord.add(searchTitle);
+        quickSearchWord.addAll(SearchHelper.splitWords(searchTitle));
         // 分词
         OkGo.<String>get("http://api.pullword.com/get.php?source=" + URLEncoder.encode(searchTitle) + "&param1=0&param2=0&json=1")
                 .tag("fenci")
@@ -777,7 +781,6 @@ public class DetailActivity extends BaseActivity {
                     @Override
                     public void onSuccess(Response<String> response) {
                         String json = response.body();
-                        quickSearchWord.clear();
                         try {
                             for (JsonElement je : new Gson().fromJson(json, JsonArray.class)) {
                                 quickSearchWord.add(je.getAsJsonObject().get("t").getAsString());
@@ -785,8 +788,8 @@ public class DetailActivity extends BaseActivity {
                         } catch (Throwable th) {
                             th.printStackTrace();
                         }
-                        quickSearchWord.add(searchTitle);
-                        EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_WORD, quickSearchWord));
+                        List<String> words = new ArrayList<>(new HashSet<>(quickSearchWord));
+                        EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_WORD, words));
                     }
 
                     @Override
@@ -903,18 +906,6 @@ public class DetailActivity extends BaseActivity {
             }
         }
         return super.dispatchKeyEvent(event);
-    }
-
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (showPreview && !fullWindows) {
-            Rect editTextRect = new Rect();
-            llPlayerFragmentContainerBlock.getHitRect(editTextRect);
-            if (editTextRect.contains((int) ev.getX(), (int) ev.getY())) {
-                return true;
-            }
-        }
-        return super.dispatchTouchEvent(ev);
     }
 
     // preview
